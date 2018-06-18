@@ -39,6 +39,12 @@ type RealmConfig struct {
 	// authrole, authmethod, authmethod, transport.  When false, all session
 	// details are included.
 	MetaStrict bool
+	// When true, the session meta api includes unsafe information,
+	// which can be used to compromise the server or other clients.
+	// Never use this, if you don't know, what you are doing.
+	// This exposes the http.Request to all other clients, which are
+	// connected and subscribed to wamp.session.on_join
+	MetaLoose bool
 	// When MetaStrict is true, MetaIncludeSessionDetails specifies session
 	// details to include that are in addition to the standard details
 	// specified by the WAMP specification.  This
@@ -97,6 +103,7 @@ type realm struct {
 	localAuth  bool
 	localAuthz bool
 
+	metaLoose      bool
 	metaStrict     bool
 	metaIncDetails []string
 }
@@ -125,6 +132,7 @@ func newRealm(config *RealmConfig, broker *Broker, dealer *Dealer, logger stdlog
 		localAuth:   config.RequireLocalAuth,
 		localAuthz:  config.RequireLocalAuthz,
 		metaStrict:  config.MetaStrict,
+		metaLoose:   config.MetaLoose,
 	}
 
 	if r.metaStrict && len(config.MetaIncludeSessionDetails) != 0 {
@@ -922,6 +930,12 @@ func (r *realm) cleanSessionDetails(details wamp.Dict) wamp.Dict {
 		}
 	} else {
 		clean = details
+	}
+
+	// If there is metaLoose set, we just return the shaped details, but with transport information.
+
+	if r.metaLoose {
+		return clean
 	}
 
 	// If there is no transport detail, all done.
