@@ -6,17 +6,25 @@ import (
 	"github.com/gammazero/nexus/wamp"
 )
 
-type publishFilter struct {
-	blIDs []wamp.ID
-	wlIDs []wamp.ID
-	blMap map[string][]string
-	wlMap map[string][]string
+// PublishFilter is an interface to check whether a publication should be sent
+// to a specific session
+type PublishFilter interface {
+	LockRequired() bool
+	PublishAllowed(sess *wamp.Session) bool
 }
 
-// newPublishFilter gets any blacklists and whitelists included in a PUBLISH
+type simplePublishFilter struct {
+	blIDs        []wamp.ID
+	wlIDs        []wamp.ID
+	blMap        map[string][]string
+	wlMap        map[string][]string
+	lockRequired bool
+}
+
+// NewSimplePublishFilter gets any blacklists and whitelists included in a PUBLISH
 // message.  If there are no filters defined by the PUBLISH message, then nil
 // is returned.
-func newPublishFilter(msg *wamp.Publish) *publishFilter {
+func NewSimplePublishFilter(msg *wamp.Publish) PublishFilter {
 	const (
 		blacklistPrefix = "exclude_"
 		whitelistPrefix = "eligible_"
@@ -79,17 +87,23 @@ func newPublishFilter(msg *wamp.Publish) *publishFilter {
 	if blIDs == nil && wlIDs == nil && blMap == nil && wlMap == nil {
 		return nil
 	}
-	return &publishFilter{blIDs, wlIDs, blMap, wlMap}
+	return &simplePublishFilter{blIDs, wlIDs, blMap, wlMap, len(blMap) != 0 || len(wlMap) != 0}
 }
 
-// publishAllowed determines if a message is allowed to be published to a
+// LockRequired determines whether a consistent state of the subscriber sessions is
+// required while running the filter
+func (f *simplePublishFilter) LockRequired() bool {
+	return f.lockRequired
+}
+
+// PublishAllowed determines if a message is allowed to be published to a
 // subscriber, by looking at any blacklists and whitelists provided with the
 // publish message.
 //
 // To receive a published event, the subscriber session must not have any
 // values that appear in a blacklist, and must have a value from each
 // whitelist.
-func (f *publishFilter) publishAllowed(sub *session) bool {
+func (f *simplePublishFilter) PublishAllowed(sub *wamp.Session) bool {
 	// Check each blacklisted ID to see if session ID is blacklisted.
 	for i := range f.blIDs {
 		if f.blIDs[i] == sub.ID {
@@ -109,11 +123,6 @@ func (f *publishFilter) publishAllowed(sub *session) bool {
 		if !eligible {
 			return false
 		}
-	}
-
-	if len(f.blMap) != 0 || len(f.wlMap) != 0 {
-		sub.rLock()
-		defer sub.rUnlock()
 	}
 
 	// Check blacklists to see if session has a value in any blacklist.
