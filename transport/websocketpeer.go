@@ -25,6 +25,9 @@ type WebsocketConfig struct {
 	SendCallback func()
 	RecvCallback func()
 
+	InMsgLenCallback  func(val uint64)
+	OutMsgLenCallback func(val uint64)
+
 	// If provided when configuring websocket client, cookies from server are
 	// put in here.  This allows cookies to be stored and then sent back to the
 	// server in subsequent websocket connections.  Cookies may be used to
@@ -86,15 +89,24 @@ func ConnectWebsocketPeer(url string, serialization serialize.Serialization, tls
 	case serialize.JSON:
 		protocol = jsonWebsocketProtocol
 		payloadType = websocket.TextMessage
-		serializer = &serialize.JSONSerializer{}
+		serializer = &serialize.JSONSerializer{
+			InMetricCallback:  wsCfg.InMsgLenCallback,
+			OutMetricCallback: wsCfg.OutMsgLenCallback,
+		}
 	case serialize.MSGPACK:
 		protocol = msgpackWebsocketProtocol
 		payloadType = websocket.BinaryMessage
-		serializer = &serialize.MessagePackSerializer{}
+		serializer = &serialize.MessagePackSerializer{
+			InMetricCallback:  wsCfg.InMsgLenCallback,
+			OutMetricCallback: wsCfg.OutMsgLenCallback,
+		}
 	case serialize.CBOR:
 		protocol = cborWebsocketProtocol
 		payloadType = websocket.BinaryMessage
-		serializer = &serialize.CBORSerializer{}
+		serializer = &serialize.CBORSerializer{
+			InMetricCallback:  wsCfg.InMsgLenCallback,
+			OutMetricCallback: wsCfg.OutMsgLenCallback,
+		}
 	default:
 		return nil, fmt.Errorf("unsupported serialization: %v", serialization)
 	}

@@ -78,9 +78,11 @@ type WebsocketServer struct {
 	// auth/authz logic.
 	EnableRequestCapture bool
 
-	// Metric Callback
-	sendCallback func()
-	recvCallback func()
+	// Metric Callbacks
+	sendCallback      func()
+	recvCallback      func()
+	inMsgLenCallback  func(val uint64)
+	outMsgLenCallback func(val uint64)
 
 	// KeepAlive configures a websocket "ping/pong" heartbeat when set to a
 	// non-zero value.  KeepAlive is the interval between websocket "pings".
@@ -137,6 +139,8 @@ func (s *WebsocketServer) SetConfig(wsCfg transport.WebsocketConfig) {
 	s.EnableRequestCapture = wsCfg.EnableRequestCapture
 	s.sendCallback = wsCfg.SendCallback
 	s.recvCallback = wsCfg.RecvCallback
+	s.outMsgLenCallback = wsCfg.OutMsgLenCallback
+	s.inMsgLenCallback = wsCfg.InMsgLenCallback
 }
 
 // ListenAndServe listens on the specified TCP address and starts a goroutine
@@ -275,13 +279,22 @@ func (s *WebsocketServer) handleWebsocket(conn *websocket.Conn, transportDetails
 		// other websocket implementations may not.
 		switch conn.Subprotocol() {
 		case jsonWebsocketProtocol:
-			serializer = &serialize.JSONSerializer{}
+			serializer = &serialize.JSONSerializer{
+				InMetricCallback:  s.inMsgLenCallback,
+				OutMetricCallback: s.outMsgLenCallback,
+			}
 			payloadType = websocket.TextMessage
 		case msgpackWebsocketProtocol:
-			serializer = &serialize.MessagePackSerializer{}
+			serializer = &serialize.MessagePackSerializer{
+				InMetricCallback:  s.inMsgLenCallback,
+				OutMetricCallback: s.outMsgLenCallback,
+			}
 			payloadType = websocket.BinaryMessage
 		case cborWebsocketProtocol:
-			serializer = &serialize.CBORSerializer{}
+			serializer = &serialize.CBORSerializer{
+				InMetricCallback:  s.inMsgLenCallback,
+				OutMetricCallback: s.outMsgLenCallback,
+			}
 			payloadType = websocket.BinaryMessage
 		default:
 			conn.Close()

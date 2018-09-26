@@ -18,12 +18,17 @@ func init() {
 
 // JSONSerializer is an implementation of Serializer that handles
 // serializing and deserializing json encoded payloads.
-type JSONSerializer struct{}
+type JSONSerializer struct {
+	InMetricCallback  func(val uint64)
+	OutMetricCallback func(val uint64)
+}
 
 // Serialize encodes a Message into a json payload.
 func (s *JSONSerializer) Serialize(msg wamp.Message) ([]byte, error) {
 	var b []byte
-	return b, codec.NewEncoderBytes(&b, jh).Encode(msgToList(msg))
+	err := codec.NewEncoderBytes(&b, jh).Encode(msgToList(msg))
+	s.OutMetricCallback(uint64(len(b)))
+	return b, err
 }
 
 // Deserialize decodes a json payload into a Message.
@@ -36,6 +41,9 @@ func (s *JSONSerializer) Deserialize(data []byte) (wamp.Message, error) {
 	if len(v) == 0 {
 		return nil, errors.New("invalid message")
 	}
+
+	// report msg size to metrics
+	s.InMetricCallback(uint64(len(v)))
 
 	// json deserializer gives us an uint64 instead of an int64, whyever it
 	// doesn't matter here, because valid values are only within an 8bit range.
