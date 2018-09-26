@@ -165,7 +165,7 @@ func NewWebsocketPeer(conn *websocket.Conn, serializer serialize.Serializer, pay
 }
 
 func (w *websocketPeer) Recv() <-chan wamp.Message {
-	w.recvCallback()
+
 	return w.rd
 }
 
@@ -185,7 +185,6 @@ func (w *websocketPeer) TrySend(msg wamp.Message) error {
 }
 
 func (w *websocketPeer) Send(msg wamp.Message) error {
-	w.sendCallback()
 	w.wr <- msg
 	return nil
 }
@@ -220,6 +219,7 @@ func (w *websocketPeer) Close() {
 func (w *websocketPeer) sendHandler() {
 	defer close(w.writerDone)
 	for msg := range w.wr {
+		w.sendCallback()
 		if msg == nil {
 			return
 		}
@@ -296,6 +296,7 @@ func (w *websocketPeer) recvHandler() {
 	defer close(w.rd)
 	defer w.conn.Close()
 	for {
+		w.recvCallback()
 		msgType, b, err := w.conn.ReadMessage()
 		if err != nil {
 			select {
