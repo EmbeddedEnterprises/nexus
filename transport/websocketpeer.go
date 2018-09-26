@@ -21,6 +21,10 @@ type WebsocketConfig struct {
 	EnableCompression     bool `json:"enable_compression"`
 	EnableContextTakeover bool `json:"enable_context_takeover"`
 
+	// Callback acting as ping for metrics for receive and send
+	SendCallback func()
+	RecvCallback func()
+
 	// If provided when configuring websocket client, cookies from server are
 	// put in here.  This allows cookies to be stored and then sent back to the
 	// server in subsequent websocket connections.  Cookies may be used to
@@ -46,6 +50,9 @@ type websocketPeer struct {
 	// Channels communicate with router.
 	rd chan wamp.Message
 	wr chan wamp.Message
+
+	sendCallback func()
+	recvCallback func()
 
 	writerDone chan struct{}
 
@@ -109,7 +116,7 @@ func ConnectWebsocketPeer(url string, serialization serialize.Serialization, tls
 	if err != nil {
 		return nil, err
 	}
-	return NewWebsocketPeer(conn, serializer, payloadType, logger, 0), nil
+	return NewWebsocketPeer(conn, serializer, payloadType, logger, 0, wsCfg.SendCallback, wsCfg.RecvCallback), nil
 }
 
 // NewWebsocketPeer creates a websocket peer from an existing websocket
@@ -119,7 +126,7 @@ func ConnectWebsocketPeer(url string, serialization serialize.Serialization, tls
 // A non-zero keepAlive value configures a websocket "ping/pong" heartbeat,
 // sendings websocket "pings" every keepAlive interval.  If a "pong" response
 // is not received after 2 intervals have elapsed then the websocket is closed.
-func NewWebsocketPeer(conn *websocket.Conn, serializer serialize.Serializer, payloadType int, logger stdlog.StdLog, keepAlive time.Duration) wamp.Peer {
+func NewWebsocketPeer(conn *websocket.Conn, serializer serialize.Serializer, payloadType int, logger stdlog.StdLog, keepAlive time.Duration, sendCallback func(), recvCallback func()) wamp.Peer {
 	w := &websocketPeer{
 		conn:        conn,
 		serializer:  serializer,
@@ -139,6 +146,9 @@ func NewWebsocketPeer(conn *websocket.Conn, serializer serialize.Serializer, pay
 		wr: make(chan wamp.Message, outQueueSize),
 
 		log: logger,
+		// callbacks
+		sendCallback: sendCallback,
+		recvCallback: recvCallback,
 	}
 	// Sending to and receiving from websocket is handled concurrently.
 	go w.recvHandler()
@@ -154,7 +164,10 @@ func NewWebsocketPeer(conn *websocket.Conn, serializer serialize.Serializer, pay
 	return w
 }
 
-func (w *websocketPeer) Recv() <-chan wamp.Message { return w.rd }
+func (w *websocketPeer) Recv() <-chan wamp.Message {
+	w.recvCallback()
+	return w.rd
+}
 
 func (w *websocketPeer) TrySend(msg wamp.Message) error {
 	select {
@@ -172,6 +185,7 @@ func (w *websocketPeer) TrySend(msg wamp.Message) error {
 }
 
 func (w *websocketPeer) Send(msg wamp.Message) error {
+	w.sendCallback()
 	w.wr <- msg
 	return nil
 }

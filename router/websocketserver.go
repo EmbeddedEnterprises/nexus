@@ -78,6 +78,10 @@ type WebsocketServer struct {
 	// auth/authz logic.
 	EnableRequestCapture bool
 
+	// Metric Callback
+	sendCallback func()
+	recvCallback func()
+
 	// KeepAlive configures a websocket "ping/pong" heartbeat when set to a
 	// non-zero value.  KeepAlive is the interval between websocket "pings".
 	// If a "pong" response is not received after 2 intervals have elapsed then
@@ -131,6 +135,8 @@ func (s *WebsocketServer) SetConfig(wsCfg transport.WebsocketConfig) {
 
 	s.EnableTrackingCookie = wsCfg.EnableTrackingCookie
 	s.EnableRequestCapture = wsCfg.EnableRequestCapture
+	s.sendCallback = wsCfg.SendCallback
+	s.recvCallback = wsCfg.RecvCallback
 }
 
 // ListenAndServe listens on the specified TCP address and starts a goroutine
@@ -285,7 +291,7 @@ func (s *WebsocketServer) handleWebsocket(conn *websocket.Conn, transportDetails
 
 	// Create a websocket peer from the websocket connection and attach the
 	// peer to the router.
-	peer := transport.NewWebsocketPeer(conn, serializer, payloadType, s.log, s.KeepAlive)
+	peer := transport.NewWebsocketPeer(conn, serializer, payloadType, s.log, s.sendCallback, s.recvCallback)
 	if err := s.router.AttachClient(peer, transportDetails); err != nil {
 		s.log.Println("Error attaching to router:", err)
 	}
