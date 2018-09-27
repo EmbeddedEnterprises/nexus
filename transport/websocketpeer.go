@@ -54,6 +54,7 @@ type websocketPeer struct {
 	rd chan wamp.Message
 	wr chan wamp.Message
 
+	// Callbacks for metrics counting
 	sendCallback func()
 	recvCallback func()
 

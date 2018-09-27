@@ -33,6 +33,10 @@ func (s *CBORSerializer) Serialize(msg wamp.Message) ([]byte, error) {
 // Deserialize decodes a cbor payload into a Message.
 func (s *CBORSerializer) Deserialize(data []byte) (wamp.Message, error) {
 	var v []interface{}
+
+	// report msg size back to metrics
+	s.InMetricCallback(uint64(len(data)))
+
 	err := codec.NewDecoderBytes(data, ch).Decode(&v)
 	if err != nil {
 		return nil, err
@@ -40,8 +44,6 @@ func (s *CBORSerializer) Deserialize(data []byte) (wamp.Message, error) {
 	if len(v) == 0 {
 		return nil, errors.New("invalid message")
 	}
-
-	s.InMetricCallback(uint64(len(v)))
 
 	// cbor deserializer gives us an uint64 instead of an int64, whyever it
 	// doesn't matter here, because valid values are only within an 8bit range.

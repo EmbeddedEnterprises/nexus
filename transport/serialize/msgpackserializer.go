@@ -42,6 +42,10 @@ func (s *MessagePackSerializer) Serialize(msg wamp.Message) ([]byte, error) {
 // Deserialize decodes a msgpack payload into a Message.
 func (s *MessagePackSerializer) Deserialize(data []byte) (wamp.Message, error) {
 	var v []interface{}
+
+	// report msg size back to metrics
+	s.InMetricCallback(uint64(len(data)))
+
 	err := codec.NewDecoderBytes(data, mh).Decode(&v)
 	if err != nil {
 		return nil, err
@@ -49,8 +53,6 @@ func (s *MessagePackSerializer) Deserialize(data []byte) (wamp.Message, error) {
 	if len(v) == 0 {
 		return nil, errors.New("invalid message")
 	}
-
-	s.InMetricCallback(uint64(len(v)))
 
 	typ, ok := v[0].(int64)
 	if !ok {

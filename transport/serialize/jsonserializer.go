@@ -34,6 +34,10 @@ func (s *JSONSerializer) Serialize(msg wamp.Message) ([]byte, error) {
 // Deserialize decodes a json payload into a Message.
 func (s *JSONSerializer) Deserialize(data []byte) (wamp.Message, error) {
 	var v []interface{}
+
+	// report msg size back to metrics
+	s.InMetricCallback(uint64(len(data)))
+
 	err := codec.NewDecoderBytes(data, jh).Decode(&v)
 	if err != nil {
 		return nil, err
@@ -41,9 +45,6 @@ func (s *JSONSerializer) Deserialize(data []byte) (wamp.Message, error) {
 	if len(v) == 0 {
 		return nil, errors.New("invalid message")
 	}
-
-	// report msg size to metrics
-	s.InMetricCallback(uint64(len(v)))
 
 	// json deserializer gives us an uint64 instead of an int64, whyever it
 	// doesn't matter here, because valid values are only within an 8bit range.
