@@ -54,10 +54,6 @@ type websocketPeer struct {
 	rd chan wamp.Message
 	wr chan wamp.Message
 
-	// Callbacks for metrics counting
-	sendCallback func()
-	recvCallback func()
-
 	writerDone chan struct{}
 
 	log stdlog.StdLog
@@ -91,22 +87,28 @@ func ConnectWebsocketPeer(url string, serialization serialize.Serialization, tls
 		protocol = jsonWebsocketProtocol
 		payloadType = websocket.TextMessage
 		serializer = &serialize.JSONSerializer{
-			InMetricCallback:  wsCfg.InMsgLenCallback,
-			OutMetricCallback: wsCfg.OutMsgLenCallback,
+			RecvMsgLenCallback:   wsCfg.InMsgLenCallback,
+			SendMsgLenCallback:   wsCfg.OutMsgLenCallback,
+			RecvMsgCountCallback: wsCfg.RecvCallback,
+			SendMsgCountCallback: wsCfg.SendCallback,
 		}
 	case serialize.MSGPACK:
 		protocol = msgpackWebsocketProtocol
 		payloadType = websocket.BinaryMessage
 		serializer = &serialize.MessagePackSerializer{
-			InMetricCallback:  wsCfg.InMsgLenCallback,
-			OutMetricCallback: wsCfg.OutMsgLenCallback,
+			RecvMsgLenCallback:   wsCfg.InMsgLenCallback,
+			SendMsgLenCallback:   wsCfg.OutMsgLenCallback,
+			RecvMsgCountCallback: wsCfg.RecvCallback,
+			SendMsgCountCallback: wsCfg.SendCallback,
 		}
 	case serialize.CBOR:
 		protocol = cborWebsocketProtocol
 		payloadType = websocket.BinaryMessage
 		serializer = &serialize.CBORSerializer{
-			InMetricCallback:  wsCfg.InMsgLenCallback,
-			OutMetricCallback: wsCfg.OutMsgLenCallback,
+			RecvMsgLenCallback:   wsCfg.InMsgLenCallback,
+			SendMsgLenCallback:   wsCfg.OutMsgLenCallback,
+			RecvMsgCountCallback: wsCfg.RecvCallback,
+			SendMsgCountCallback: wsCfg.SendCallback,
 		}
 	default:
 		return nil, fmt.Errorf("unsupported serialization: %v", serialization)
@@ -129,7 +131,7 @@ func ConnectWebsocketPeer(url string, serialization serialize.Serialization, tls
 	if err != nil {
 		return nil, err
 	}
-	return NewWebsocketPeer(conn, serializer, payloadType, logger, 0, wsCfg.SendCallback, wsCfg.RecvCallback), nil
+	return NewWebsocketPeer(conn, serializer, payloadType, logger, 0), nil
 }
 
 // NewWebsocketPeer creates a websocket peer from an existing websocket
@@ -139,7 +141,7 @@ func ConnectWebsocketPeer(url string, serialization serialize.Serialization, tls
 // A non-zero keepAlive value configures a websocket "ping/pong" heartbeat,
 // sendings websocket "pings" every keepAlive interval.  If a "pong" response
 // is not received after 2 intervals have elapsed then the websocket is closed.
-func NewWebsocketPeer(conn *websocket.Conn, serializer serialize.Serializer, payloadType int, logger stdlog.StdLog, keepAlive time.Duration, sendCallback func(), recvCallback func()) wamp.Peer {
+func NewWebsocketPeer(conn *websocket.Conn, serializer serialize.Serializer, payloadType int, logger stdlog.StdLog, keepAlive time.Duration) wamp.Peer {
 	w := &websocketPeer{
 		conn:        conn,
 		serializer:  serializer,
@@ -159,9 +161,6 @@ func NewWebsocketPeer(conn *websocket.Conn, serializer serialize.Serializer, pay
 		wr: make(chan wamp.Message, outQueueSize),
 
 		log: logger,
-		// callbacks
-		sendCallback: sendCallback,
-		recvCallback: recvCallback,
 	}
 	// Sending to and receiving from websocket is handled concurrently.
 	go w.recvHandler()
@@ -232,7 +231,6 @@ func (w *websocketPeer) Close() {
 func (w *websocketPeer) sendHandler() {
 	defer close(w.writerDone)
 	for msg := range w.wr {
-		w.sendCallback()
 		if msg == nil {
 			return
 		}
@@ -309,7 +307,6 @@ func (w *websocketPeer) recvHandler() {
 	defer close(w.rd)
 	defer w.conn.Close()
 	for {
-		w.recvCallback()
 		msgType, b, err := w.conn.ReadMessage()
 		if err != nil {
 			select {

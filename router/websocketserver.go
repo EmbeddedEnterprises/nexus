@@ -113,7 +113,7 @@ type WebsocketServer struct {
 //         Addr:    address,
 //     }
 //     server.ListenAndServe()
-func NewWebsocketServer(r Router, sendLenCallback func(val uint64), recvLenCallback func(val uint64)) *WebsocketServer {
+func NewWebsocketServer(r Router, sendLenCallback func(val uint64), recvLenCallback func(val uint64), sendCountCallback func(), recvCountCallback func()) *WebsocketServer {
 	s := &WebsocketServer{
 		router:    r,
 		protocols: map[string]protocol{},
@@ -122,18 +122,24 @@ func NewWebsocketServer(r Router, sendLenCallback func(val uint64), recvLenCallb
 	s.Upgrader = &websocket.Upgrader{}
 	s.addProtocol(jsonWebsocketProtocol, websocket.TextMessage,
 		&serialize.JSONSerializer{
-			InMetricCallback:  recvLenCallback,
-			OutMetricCallback: sendLenCallback,
+			RecvMsgLenCallback:   recvLenCallback,
+			SendMsgLenCallback:   sendLenCallback,
+			RecvMsgCountCallback: recvCountCallback,
+			SendMsgCountCallback: sendCountCallback,
 		})
 	s.addProtocol(msgpackWebsocketProtocol, websocket.BinaryMessage,
 		&serialize.MessagePackSerializer{
-			InMetricCallback:  recvLenCallback,
-			OutMetricCallback: sendLenCallback,
+			RecvMsgLenCallback:   recvLenCallback,
+			SendMsgLenCallback:   sendLenCallback,
+			RecvMsgCountCallback: recvCountCallback,
+			SendMsgCountCallback: sendCountCallback,
 		})
 	s.addProtocol(cborWebsocketProtocol, websocket.BinaryMessage,
 		&serialize.CBORSerializer{
-			InMetricCallback:  recvLenCallback,
-			OutMetricCallback: sendLenCallback,
+			RecvMsgLenCallback:   recvLenCallback,
+			SendMsgLenCallback:   sendLenCallback,
+			RecvMsgCountCallback: recvCountCallback,
+			SendMsgCountCallback: sendCountCallback,
 		})
 
 	return s
@@ -289,20 +295,26 @@ func (s *WebsocketServer) handleWebsocket(conn *websocket.Conn, transportDetails
 		switch conn.Subprotocol() {
 		case jsonWebsocketProtocol:
 			serializer = &serialize.JSONSerializer{
-				InMetricCallback:  s.inMsgLenCallback,
-				OutMetricCallback: s.outMsgLenCallback,
+				RecvMsgLenCallback:   s.inMsgLenCallback,
+				SendMsgLenCallback:   s.outMsgLenCallback,
+				RecvMsgCountCallback: s.recvCallback,
+				SendMsgCountCallback: s.sendCallback,
 			}
 			payloadType = websocket.TextMessage
 		case msgpackWebsocketProtocol:
 			serializer = &serialize.MessagePackSerializer{
-				InMetricCallback:  s.inMsgLenCallback,
-				OutMetricCallback: s.outMsgLenCallback,
+				RecvMsgLenCallback:   s.inMsgLenCallback,
+				SendMsgLenCallback:   s.outMsgLenCallback,
+				RecvMsgCountCallback: s.recvCallback,
+				SendMsgCountCallback: s.sendCallback,
 			}
 			payloadType = websocket.BinaryMessage
 		case cborWebsocketProtocol:
 			serializer = &serialize.CBORSerializer{
-				InMetricCallback:  s.inMsgLenCallback,
-				OutMetricCallback: s.outMsgLenCallback,
+				RecvMsgLenCallback:   s.inMsgLenCallback,
+				SendMsgLenCallback:   s.outMsgLenCallback,
+				RecvMsgCountCallback: s.recvCallback,
+				SendMsgCountCallback: s.sendCallback,
 			}
 			payloadType = websocket.BinaryMessage
 		default:
@@ -313,7 +325,7 @@ func (s *WebsocketServer) handleWebsocket(conn *websocket.Conn, transportDetails
 
 	// Create a websocket peer from the websocket connection and attach the
 	// peer to the router.
-	peer := transport.NewWebsocketPeer(conn, serializer, payloadType, s.log, s.KeepAlive, s.sendCallback, s.recvCallback)
+	peer := transport.NewWebsocketPeer(conn, serializer, payloadType, s.log, s.KeepAlive)
 	if err := s.router.AttachClient(peer, transportDetails); err != nil {
 		s.log.Println("Error attaching to router:", err)
 	}

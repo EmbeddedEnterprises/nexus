@@ -26,8 +26,10 @@ func MsgpackRegisterExtension(t reflect.Type, ext byte, encode func(reflect.Valu
 // MessagePackSerializer is an implementation of Serializer that handles
 // serializing and deserializing msgpack encoded payloads.
 type MessagePackSerializer struct {
-	InMetricCallback  func(val uint64)
-	OutMetricCallback func(val uint64)
+	RecvMsgLenCallback   func(val uint64)
+	SendMsgLenCallback   func(val uint64)
+	RecvMsgCountCallback func()
+	SendMsgCountCallback func()
 }
 
 // Serialize encodes a Message into a msgpack payload.
@@ -35,7 +37,8 @@ func (s *MessagePackSerializer) Serialize(msg wamp.Message) ([]byte, error) {
 	var b []byte
 	err := codec.NewEncoderBytes(&b, mh).Encode(
 		msgToList(msg))
-	s.OutMetricCallback(uint64(len(b)))
+	s.SendMsgLenCallback(uint64(len(b)))
+	s.SendMsgCountCallback()
 	return b, err
 }
 
@@ -44,7 +47,8 @@ func (s *MessagePackSerializer) Deserialize(data []byte) (wamp.Message, error) {
 	var v []interface{}
 
 	// report msg size back to metrics
-	s.InMetricCallback(uint64(len(data)))
+	s.RecvMsgLenCallback(uint64(len(data)))
+	s.RecvMsgCountCallback()
 
 	err := codec.NewDecoderBytes(data, mh).Decode(&v)
 	if err != nil {
