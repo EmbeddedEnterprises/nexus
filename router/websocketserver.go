@@ -113,7 +113,7 @@ type WebsocketServer struct {
 //         Addr:    address,
 //     }
 //     server.ListenAndServe()
-func NewWebsocketServer(r Router) *WebsocketServer {
+func NewWebsocketServer(r Router, sendLenCallback func(val uint64), recvLenCallback func(val uint64)) *WebsocketServer {
 	s := &WebsocketServer{
 		router:    r,
 		protocols: map[string]protocol{},
@@ -121,11 +121,20 @@ func NewWebsocketServer(r Router) *WebsocketServer {
 	}
 	s.Upgrader = &websocket.Upgrader{}
 	s.addProtocol(jsonWebsocketProtocol, websocket.TextMessage,
-		&serialize.JSONSerializer{})
+		&serialize.JSONSerializer{
+			InMetricCallback:  recvLenCallback,
+			OutMetricCallback: sendLenCallback,
+		})
 	s.addProtocol(msgpackWebsocketProtocol, websocket.BinaryMessage,
-		&serialize.MessagePackSerializer{})
+		&serialize.MessagePackSerializer{
+			InMetricCallback:  recvLenCallback,
+			OutMetricCallback: sendLenCallback,
+		})
 	s.addProtocol(cborWebsocketProtocol, websocket.BinaryMessage,
-		&serialize.CBORSerializer{})
+		&serialize.CBORSerializer{
+			InMetricCallback:  recvLenCallback,
+			OutMetricCallback: sendLenCallback,
+		})
 
 	return s
 }
