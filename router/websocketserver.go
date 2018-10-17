@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gammazero/nexus/metrics"
 	"github.com/gammazero/nexus/stdlog"
 	"github.com/gammazero/nexus/transport"
 	"github.com/gammazero/nexus/transport/serialize"
@@ -113,36 +114,22 @@ type WebsocketServer struct {
 //         Addr:    address,
 //     }
 //     server.ListenAndServe()
-func NewWebsocketServer(r Router, sendLenCallback func(val uint64), recvLenCallback func(val uint64), sendCountCallback func(), recvCountCallback func()) *WebsocketServer {
+func NewWebsocketServer(r Router) (*WebsocketServer, *metrics.MetricMap) {
 	s := &WebsocketServer{
 		router:    r,
 		protocols: map[string]protocol{},
 		log:       r.Logger(),
 	}
 	s.Upgrader = &websocket.Upgrader{}
+	metrics.Init(9101, true, false)
 	s.addProtocol(jsonWebsocketProtocol, websocket.TextMessage,
-		&serialize.JSONSerializer{
-			RecvMsgLenCallback:   recvLenCallback,
-			SendMsgLenCallback:   sendLenCallback,
-			RecvMsgCountCallback: recvCountCallback,
-			SendMsgCountCallback: sendCountCallback,
-		})
+		&serialize.JSONSerializer{})
 	s.addProtocol(msgpackWebsocketProtocol, websocket.BinaryMessage,
-		&serialize.MessagePackSerializer{
-			RecvMsgLenCallback:   recvLenCallback,
-			SendMsgLenCallback:   sendLenCallback,
-			RecvMsgCountCallback: recvCountCallback,
-			SendMsgCountCallback: sendCountCallback,
-		})
+		&serialize.MessagePackSerializer{})
 	s.addProtocol(cborWebsocketProtocol, websocket.BinaryMessage,
-		&serialize.CBORSerializer{
-			RecvMsgLenCallback:   recvLenCallback,
-			SendMsgLenCallback:   sendLenCallback,
-			RecvMsgCountCallback: recvCountCallback,
-			SendMsgCountCallback: sendCountCallback,
-		})
+		&serialize.CBORSerializer{})
 
-	return s
+	return s, metrics.MetricGlobal
 }
 
 // Deprecated: Set WebsocketServer.Upgrader and WebsockServer.Xxx members
@@ -294,28 +281,13 @@ func (s *WebsocketServer) handleWebsocket(conn *websocket.Conn, transportDetails
 		// other websocket implementations may not.
 		switch conn.Subprotocol() {
 		case jsonWebsocketProtocol:
-			serializer = &serialize.JSONSerializer{
-				RecvMsgLenCallback:   s.inMsgLenCallback,
-				SendMsgLenCallback:   s.outMsgLenCallback,
-				RecvMsgCountCallback: s.recvCallback,
-				SendMsgCountCallback: s.sendCallback,
-			}
+			serializer = &serialize.JSONSerializer{}
 			payloadType = websocket.TextMessage
 		case msgpackWebsocketProtocol:
-			serializer = &serialize.MessagePackSerializer{
-				RecvMsgLenCallback:   s.inMsgLenCallback,
-				SendMsgLenCallback:   s.outMsgLenCallback,
-				RecvMsgCountCallback: s.recvCallback,
-				SendMsgCountCallback: s.sendCallback,
-			}
+			serializer = &serialize.MessagePackSerializer{}
 			payloadType = websocket.BinaryMessage
 		case cborWebsocketProtocol:
-			serializer = &serialize.CBORSerializer{
-				RecvMsgLenCallback:   s.inMsgLenCallback,
-				SendMsgLenCallback:   s.outMsgLenCallback,
-				RecvMsgCountCallback: s.recvCallback,
-				SendMsgCountCallback: s.sendCallback,
-			}
+			serializer = &serialize.CBORSerializer{}
 			payloadType = websocket.BinaryMessage
 		default:
 			conn.Close()

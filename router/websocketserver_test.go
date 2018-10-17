@@ -35,7 +35,7 @@ func TestWSHandshakeJSON(t *testing.T) {
 	}
 	defer r.Close()
 
-	s := NewWebsocketServer(r)
+	s, _ := NewWebsocketServer(r)
 	s.Upgrader.EnableCompression = true
 	closer, err := s.ListenAndServe(wsAddr)
 	if err != nil {
@@ -73,7 +73,9 @@ func TestWSHandshakeMsgpack(t *testing.T) {
 	}
 	defer r.Close()
 
-	closer, err := NewWebsocketServer(r).ListenAndServe(wsAddr)
+	s, _ := NewWebsocketServer(r)
+
+	closer, err := s.ListenAndServe(wsAddr)
 	if err != nil {
 		t.Fatal(err)
 	}

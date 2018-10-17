@@ -4,6 +4,7 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/gammazero/nexus/metrics"
 	"github.com/gammazero/nexus/wamp"
 	"github.com/ugorji/go/codec"
 )
@@ -26,10 +27,6 @@ func MsgpackRegisterExtension(t reflect.Type, ext byte, encode func(reflect.Valu
 // MessagePackSerializer is an implementation of Serializer that handles
 // serializing and deserializing msgpack encoded payloads.
 type MessagePackSerializer struct {
-	RecvMsgLenCallback   func(val uint64)
-	SendMsgLenCallback   func(val uint64)
-	RecvMsgCountCallback func()
-	SendMsgCountCallback func()
 }
 
 // Serialize encodes a Message into a msgpack payload.
@@ -37,8 +34,8 @@ func (s *MessagePackSerializer) Serialize(msg wamp.Message) ([]byte, error) {
 	var b []byte
 	err := codec.NewEncoderBytes(&b, mh).Encode(
 		msgToList(msg))
-	s.SendMsgLenCallback(uint64(len(b)))
-	s.SendMsgCountCallback()
+	metrics.RecvMsgLenHandler(uint64(len(b)))
+	metrics.RecvMsgCountHandler()
 	return b, err
 }
 
@@ -47,8 +44,8 @@ func (s *MessagePackSerializer) Deserialize(data []byte) (wamp.Message, error) {
 	var v []interface{}
 
 	// report msg size back to metrics
-	s.RecvMsgLenCallback(uint64(len(data)))
-	s.RecvMsgCountCallback()
+	metrics.RecvMsgLenHandler(uint64(len(data)))
+	metrics.RecvMsgCountHandler()
 
 	err := codec.NewDecoderBytes(data, mh).Decode(&v)
 	if err != nil {

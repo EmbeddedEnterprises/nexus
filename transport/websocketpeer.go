@@ -86,30 +86,15 @@ func ConnectWebsocketPeer(url string, serialization serialize.Serialization, tls
 	case serialize.JSON:
 		protocol = jsonWebsocketProtocol
 		payloadType = websocket.TextMessage
-		serializer = &serialize.JSONSerializer{
-			RecvMsgLenCallback:   wsCfg.InMsgLenCallback,
-			SendMsgLenCallback:   wsCfg.OutMsgLenCallback,
-			RecvMsgCountCallback: wsCfg.RecvCallback,
-			SendMsgCountCallback: wsCfg.SendCallback,
-		}
+		serializer = &serialize.JSONSerializer{}
 	case serialize.MSGPACK:
 		protocol = msgpackWebsocketProtocol
 		payloadType = websocket.BinaryMessage
-		serializer = &serialize.MessagePackSerializer{
-			RecvMsgLenCallback:   wsCfg.InMsgLenCallback,
-			SendMsgLenCallback:   wsCfg.OutMsgLenCallback,
-			RecvMsgCountCallback: wsCfg.RecvCallback,
-			SendMsgCountCallback: wsCfg.SendCallback,
-		}
+		serializer = &serialize.MessagePackSerializer{}
 	case serialize.CBOR:
 		protocol = cborWebsocketProtocol
 		payloadType = websocket.BinaryMessage
-		serializer = &serialize.CBORSerializer{
-			RecvMsgLenCallback:   wsCfg.InMsgLenCallback,
-			SendMsgLenCallback:   wsCfg.OutMsgLenCallback,
-			RecvMsgCountCallback: wsCfg.RecvCallback,
-			SendMsgCountCallback: wsCfg.SendCallback,
-		}
+		serializer = &serialize.CBORSerializer{}
 	default:
 		return nil, fmt.Errorf("unsupported serialization: %v", serialization)
 	}
