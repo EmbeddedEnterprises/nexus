@@ -8,8 +8,8 @@ import (
 func TestServer(t *testing.T) {
 	Init(3444, true, false)
 	mp := GetSubMapOf(MetricGlobal.mp, "tester")
-	IncrementAtomicUint64KeyOf(mp, "test")
-	IncreaseAtomicUint64KeyOf(mp, "test", 54)
+	IncrementAtomicUint64KeyOf(mp.mp, "test")
+	IncreaseAtomicUint64KeyOf(mp.mp, "test", 54)
 	r := httptest.NewRequest("", "localhost:3444", nil)
 	w := httptest.NewRecorder()
 	metricToJSON(w, r)
@@ -22,8 +22,8 @@ func TestFlat(t *testing.T) {
 
 func TestMap(t *testing.T) {
 	mp := GetSubMapOf(MetricGlobal.mp, "tester")
-	IncrementAtomicUint64KeyOf(mp, "test")
-	IncreaseAtomicUint64KeyOf(mp, "test", 54)
+	IncrementAtomicUint64KeyOf(mp.mp, "test")
+	IncreaseAtomicUint64KeyOf(mp.mp, "test", 54)
 }
 
 func TestBuiltinHandlers(t *testing.T) {

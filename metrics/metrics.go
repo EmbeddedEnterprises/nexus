@@ -75,18 +75,18 @@ func IncreaseAtomicUint64KeyOf(hmp *hashmap.HashMap, key string, diff uint64) {
 	atomic.AddUint64(count, diff)
 }
 
-func GetSubMapOf(hmp *hashmap.HashMap, key string) (mp *hashmap.HashMap) {
-	var m hashmap.HashMap
+func GetSubMapOf(hmp *hashmap.HashMap, key string) (mp *MetricMap) {
+	var m MetricMap
 	val, loaded := hmp.GetOrInsert(key, &m)
-	mp = (val).(*hashmap.HashMap)
+	mp = (val).(*MetricMap)
 	if !loaded {
-		mp = hashmap.New(128)
+		mp.mp = hashmap.New(128)
 	}
 	hmp.Set(key, mp)
 	return
 }
 
-func (mp *MetricMap) GetSubMap(key string) (dmp *hashmap.HashMap) {
+func (mp *MetricMap) GetSubMap(key string) (dmp *MetricMap) {
 	dmp = GetSubMapOf(mp.mp, key)
 	return
 }
