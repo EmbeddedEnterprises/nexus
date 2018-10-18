@@ -33,7 +33,7 @@ func startAPI(port uint16) {
 
 // metricToJSON creates raw view of current data of MetricGlobal
 func metricToJSON(w http.ResponseWriter, r *http.Request) {
-	disMtr, err := MetricMapToGoMap(MetricGlobal.mp)
+	disMtr, err := MetricGlobal.MetricMapToGoMap()
 	if err != nil {
 		return
 	}
@@ -111,11 +111,11 @@ func SendMsgLenHandler(len uint64) {
 }
 
 // MetricMapToGoMap transform Hashmap to normal Go Map
-func MetricMapToGoMap(mp *hashmap.HashMap) (disMtr DisplayGeneral, err error) {
+func (hmp *MetricMap) MetricMapToGoMap() (disMtr DisplayGeneral, err error) {
 	disMtr = make(map[string]interface{}, 32)
-	for k := range mp.Iter() {
-		if m, ok := (k.Value).(*hashmap.HashMap); ok {
-			dmp, e := MetricMapToGoMap(m)
+	for k := range hmp.mp.Iter() {
+		if m, ok := (k.Value).(*MetricMap); ok {
+			dmp, e := m.MetricMapToGoMap()
 			if err != nil {
 				err = e
 				return

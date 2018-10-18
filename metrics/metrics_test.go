@@ -34,5 +34,5 @@ func TestBuiltinHandlers(t *testing.T) {
 }
 
 func TestConvert(t *testing.T) {
-	MetricMapToGoMap(MetricGlobal.mp)
+	MetricGlobal.MetricMapToGoMap()
 }
