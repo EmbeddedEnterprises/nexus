@@ -79,12 +79,6 @@ type WebsocketServer struct {
 	// auth/authz logic.
 	EnableRequestCapture bool
 
-	// Metric Callbacks
-	sendCallback      func()
-	recvCallback      func()
-	inMsgLenCallback  func(val uint64)
-	outMsgLenCallback func(val uint64)
-
 	// KeepAlive configures a websocket "ping/pong" heartbeat when set to a
 	// non-zero value.  KeepAlive is the interval between websocket "pings".
 	// If a "pong" response is not received after 2 intervals have elapsed then
@@ -139,10 +133,6 @@ func (s *WebsocketServer) SetConfig(wsCfg transport.WebsocketConfig) {
 
 	s.EnableTrackingCookie = wsCfg.EnableTrackingCookie
 	s.EnableRequestCapture = wsCfg.EnableRequestCapture
-	s.sendCallback = wsCfg.SendCallback
-	s.recvCallback = wsCfg.RecvCallback
-	s.outMsgLenCallback = wsCfg.OutMsgLenCallback
-	s.inMsgLenCallback = wsCfg.InMsgLenCallback
 }
 
 // ListenAndServe listens on the specified TCP address and starts a goroutine

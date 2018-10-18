@@ -6,7 +6,7 @@ import (
 )
 
 func TestServer(t *testing.T) {
-	Init(3444, true, false)
+	go startAPI(3453)
 	mp := GetSubMapOf(MetricGlobal.mp, "tester")
 	IncrementAtomicUint64KeyOf(mp.mp, "test")
 	IncreaseAtomicUint64KeyOf(mp.mp, "test", 54)
@@ -34,5 +34,5 @@ func TestBuiltinHandlers(t *testing.T) {
 }
 
 func TestConvert(t *testing.T) {
-	processMtr(MetricGlobal.mp)
+	MetricMapToGoMap(MetricGlobal.mp)
 }

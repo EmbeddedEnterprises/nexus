@@ -21,13 +21,6 @@ type WebsocketConfig struct {
 	EnableCompression     bool `json:"enable_compression"`
 	EnableContextTakeover bool `json:"enable_context_takeover"`
 
-	// Callback acting as ping for metrics for receive and send
-	SendCallback func()
-	RecvCallback func()
-
-	InMsgLenCallback  func(val uint64)
-	OutMsgLenCallback func(val uint64)
-
 	// If provided when configuring websocket client, cookies from server are
 	// put in here.  This allows cookies to be stored and then sent back to the
 	// server in subsequent websocket connections.  Cookies may be used to
