@@ -115,7 +115,6 @@ func NewWebsocketServer(r Router) (*WebsocketServer, *metrics.MetricMap) {
 		log:       r.Logger(),
 	}
 	s.Upgrader = &websocket.Upgrader{}
-	metrics.Init(9101, true, false)
 	s.addProtocol(jsonWebsocketProtocol, websocket.TextMessage,
 		&serialize.JSONSerializer{})
 	s.addProtocol(msgpackWebsocketProtocol, websocket.BinaryMessage,

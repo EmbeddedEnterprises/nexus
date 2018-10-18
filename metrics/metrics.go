@@ -16,7 +16,7 @@ var (
 
 type DisplayGeneral map[string]interface{}
 
-// MetricGlobal is intended to be used as an quick acccess way to increase and decrease simple values such as `in/outMessageCount` and `..Authorization`
+// MetricMap is intended to be used as an quick acccess way to increase and decrease simple values such as `in/outMessageCount` and `..Authorization`
 type MetricMap struct {
 	mp *hashmap.HashMap
 }
