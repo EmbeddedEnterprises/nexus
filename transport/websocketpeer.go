@@ -154,7 +154,10 @@ func NewWebsocketPeer(conn *websocket.Conn, serializer serialize.Serializer, pay
 	return w
 }
 
-func (w *websocketPeer) Recv() <-chan wamp.Message { return w.rd }
+func (w *websocketPeer) Recv() <-chan wamp.Message {
+
+	return w.rd
+}
 
 func (w *websocketPeer) TrySend(msg wamp.Message) error {
 	select {

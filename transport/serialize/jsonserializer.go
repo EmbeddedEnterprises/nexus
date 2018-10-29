@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/gammazero/nexus/metrics"
 	"github.com/gammazero/nexus/wamp"
 	"github.com/ugorji/go/codec"
 )
@@ -18,17 +19,26 @@ func init() {
 
 // JSONSerializer is an implementation of Serializer that handles
 // serializing and deserializing json encoded payloads.
-type JSONSerializer struct{}
+type JSONSerializer struct {
+}
 
 // Serialize encodes a Message into a json payload.
 func (s *JSONSerializer) Serialize(msg wamp.Message) ([]byte, error) {
 	var b []byte
-	return b, codec.NewEncoderBytes(&b, jh).Encode(msgToList(msg))
+	err := codec.NewEncoderBytes(&b, jh).Encode(msgToList(msg))
+	metrics.SendMsgLenHandler(uint64(len(b)))
+	metrics.SendMsgCountHandler()
+	return b, err
 }
 
 // Deserialize decodes a json payload into a Message.
 func (s *JSONSerializer) Deserialize(data []byte) (wamp.Message, error) {
 	var v []interface{}
+
+	// report msg size back to metrics
+	metrics.RecvMsgLenHandler(uint64(len(data)))
+	metrics.RecvMsgCountHandler()
+
 	err := codec.NewDecoderBytes(data, jh).Decode(&v)
 	if err != nil {
 		return nil, err

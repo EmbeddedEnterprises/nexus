@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gammazero/nexus/metrics"
 	"github.com/gammazero/nexus/stdlog"
 	"github.com/gammazero/nexus/transport"
 	"github.com/gammazero/nexus/transport/serialize"
@@ -107,7 +108,7 @@ type WebsocketServer struct {
 //         Addr:    address,
 //     }
 //     server.ListenAndServe()
-func NewWebsocketServer(r Router) *WebsocketServer {
+func NewWebsocketServer(r Router) (*WebsocketServer, *metrics.MetricMap) {
 	s := &WebsocketServer{
 		router:    r,
 		protocols: map[string]protocol{},
@@ -121,7 +122,7 @@ func NewWebsocketServer(r Router) *WebsocketServer {
 	s.addProtocol(cborWebsocketProtocol, websocket.BinaryMessage,
 		&serialize.CBORSerializer{})
 
-	return s
+	return s, metrics.MetricGlobal
 }
 
 // Deprecated: Set WebsocketServer.Upgrader and WebsockServer.Xxx members

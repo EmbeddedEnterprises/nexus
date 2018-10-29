@@ -4,6 +4,7 @@ import (
 	"errors"
 	"reflect"
 
+	"github.com/gammazero/nexus/metrics"
 	"github.com/gammazero/nexus/wamp"
 	"github.com/ugorji/go/codec"
 )
@@ -17,17 +18,26 @@ func init() {
 
 // CBORSerializer is an implementation of Serializer that handles
 // serializing and deserializing cbor encoded payloads.
-type CBORSerializer struct{}
+type CBORSerializer struct {
+}
 
 // Serialize encodes a Message into a cbor payload.
 func (s *CBORSerializer) Serialize(msg wamp.Message) ([]byte, error) {
 	var b []byte
-	return b, codec.NewEncoderBytes(&b, ch).Encode(msgToList(msg))
+	err := codec.NewEncoderBytes(&b, ch).Encode(msgToList(msg))
+	metrics.SendMsgLenHandler(uint64(len(b)))
+	metrics.SendMsgCountHandler()
+	return b, err
 }
 
 // Deserialize decodes a cbor payload into a Message.
 func (s *CBORSerializer) Deserialize(data []byte) (wamp.Message, error) {
 	var v []interface{}
+
+	// report msg size back to metrics
+	metrics.RecvMsgLenHandler(uint64(len(data)))
+	metrics.RecvMsgCountHandler()
+
 	err := codec.NewDecoderBytes(data, ch).Decode(&v)
 	if err != nil {
 		return nil, err
